@@ -10,27 +10,20 @@ public class quadTree {
     quadTree bottomLeft;
     quadTree bottomRight;
     boolean isDivided;
-    // Bounding box (half-open intervals):
-    // z1,z2 inclusive, z3,z4 exclusive in the sense [z1..z3) × [z2..z4)
     int z1;
     int z2;
     int z3;
     int z4;
     int depth;
     static int MAXdepth = -1;
-
-    // Constructor for the top-level quadtree
     public quadTree(int[][] image) {
         this.data = image;
         this.isDivided = true;
-        // If square, assume image.length == image[0].length
         this.z1 = 0;
         this.z2 = 0;
-        this.z3 = image.length;       // half-open => last row index is z3-1
-        this.z4 = image[0].length;// last col index is z4-1
+        this.z3 = image.length;
+        this.z4 = image[0].length;
     }
-
-    // Constructor for children, specifying bounding box
     public quadTree(int[][] data, int z1, int z2, int z3, int z4, int depth) {
         this.data = data;
         this.isDivided = true;
@@ -45,7 +38,6 @@ public class quadTree {
         for (int i = x1; i < x2; i++) {
             for (int j = y1; j < y2; j++) {
                 if (arr[i][j] != firstColor) {
-                    // Not uniform
                     return false;
                 }
             }
@@ -53,34 +45,26 @@ public class quadTree {
         return true;
     }
     public void Divide(int[][] arr,int d) {
-        int height = z3 - z1;  // row span
-        int width  = z4 - z2;  // col span
+        int height = z3 - z1;
+        int width  = z4 - z2;
 
-        // If not uniform, subdivide
         if (!checkSolid(arr, z1, z2, z3, z4)) {
-            // We set isDivided = true and create children
             this.isDivided = true;
 
-            int midRow = z1 + height / 2; // midpoint in rows
-            int midCol = z2 + width / 2;  // midpoint in cols
+            int midRow = z1 + height / 2;
+            int midCol = z2 + width / 2;
 
-            // topLeft -> [z1..midRow) × [z2..midCol)
             this.topLeft = new quadTree(data, z1, z2, midRow, midCol,d+1);
-            // topRight -> [midRow..z3) × [z2..midCol)
             this.topRight = new quadTree(data, midRow, z2, z3, midCol,d+1);
-            // bottomLeft -> [z1..midRow) × [midCol..z4)
             this.bottomLeft = new quadTree(data, z1, midCol, midRow, z4,d+1);
-            // bottomRight -> [midRow..z3) × [midCol..z4)
             this.bottomRight = new quadTree(data, midRow, midCol, z3, z4,d+1);
 
-            // Recurse
             this.topLeft.Divide(arr,d+1);
             this.topRight.Divide(arr,d+1);
             this.bottomLeft.Divide(arr,d+1);
             this.bottomRight.Divide(arr,d+1);
 
         } else {
-            // It's uniform => single color block
             this.isDivided = false;
             MAXdepth = Math.max(this.depth,MAXdepth);
         }
@@ -90,17 +74,15 @@ public class quadTree {
     }
     public void mask1(int x1, int y1, int x2, int y2, int[][] ans) {
         if (this.isDivided) {
-            // Subdivided => pass to children
             this.topLeft.mask1(x1, y1, x2, y2, ans);
             this.topRight.mask1(x1, y1, x2, y2, ans);
             this.bottomLeft.mask1(x1, y1, x2, y2, ans);
             this.bottomRight.mask1(x1, y1, x2, y2, ans);
         } else {
-            // Leaf node => if ANY overlap, color entire bounding box black
             if (overlap(x1, y1, x2, y2)) {
                 for (int i = z1; i < z3; i++) {
                     for (int j = z2; j < z4; j++) {
-                        ans[i][j] = 0x000000; // black
+                        ans[i][j] = 0x000000;
                     }
                 }
             }
@@ -126,15 +108,11 @@ public class quadTree {
         }
     }
     public int pixelDepth(int px, int py, int depth) {
-        // If not subdivided, we are at a leaf => return depth
         if (!this.isDivided) return depth;
 
-        // If subdivided, figure out which child covers (px,py)
-        int midRow = (z1 + z3) / 2; // halfway in rows
-        int midCol = (z2 + z4) / 2; // halfway in cols
+        int midRow = (z1 + z3) / 2;
+        int midCol = (z2 + z4) / 2;
 
-        // Check if px < midRow => top side, else bottom side
-        // and if py < midCol => left side, else right side
         if (px < midRow) {
             if (py < midCol) {
                 return this.topLeft.pixelDepth(px, py, depth + 1);
@@ -156,7 +134,6 @@ public class quadTree {
 
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                // Force alpha=255
                 int argb = 0xFF000000 | (data[y][x] & 0xFFFFFF);
                 image.setRGB(x, y, argb);
             }
@@ -164,7 +141,6 @@ public class quadTree {
         return image;
     }
 
-    // Helper to convert 0xRRGGBB int to [R,G,B]
     public int[] hexToRgb(int hex) {
         int red   = (hex >> 16) & 0xFF;
         int green = (hex >> 8) & 0xFF;
@@ -172,7 +148,6 @@ public class quadTree {
         return new int[]{red, green, blue};
     }
 
-    // Helper to combine [R,G,B] into 0xRRGGBB
     public int rgbToHex(int[] rgb) {
         int red   = rgb[0];
         int green = rgb[1];
@@ -181,17 +156,15 @@ public class quadTree {
     }
     public void search1(int x1, int y1, int x2, int y2, int[][] ans, int[][] data) {
         if (this.isDivided) {
-            // Subdivided => pass to children
             this.topLeft.search1(x1, y1, x2, y2, ans, data);
             this.topRight.search1(x1, y1, x2, y2, ans, data);
             this.bottomLeft.search1(x1, y1, x2, y2, ans, data);
             this.bottomRight.search1(x1, y1, x2, y2, ans, data);
         } else {
-            // Leaf node => if ANY overlap, color entire bounding box black
             if (overlap(x1, y1, x2, y2)) {
                 for (int i = z1; i < z3; i++) {
                     for (int j = z2; j < z4; j++) {
-                        ans[i][j] = data[i][j]; // black
+                        ans[i][j] = data[i][j];
                     }
                 }
             }
@@ -212,7 +185,7 @@ public class quadTree {
     public quadTree compress(int newSize) {
         int[][] da = new int[newSize][newSize];
         quadTree q = new quadTree(da, 0, 0, newSize, newSize,0);
-        int step = this.data.length / newSize;  // assume perfect division
+        int step = this.data.length / newSize;
 
         for (int i = 0; i < newSize; i++) {
             for (int j = 0; j < newSize; j++) {
